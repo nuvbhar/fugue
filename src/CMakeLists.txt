@@ -20,6 +20,11 @@ add_executable(fugue
     terminal/renderer.cpp
     terminal/input.cpp
     terminal/capabilities.cpp
+    ui/layout_engine.cpp
+    ui/theme.cpp
+    ui/components/text_box.cpp
+    ui/components/border.cpp
+    ui/components/list.cpp
     ${PLATFORM_SOURCES}
 )
 
