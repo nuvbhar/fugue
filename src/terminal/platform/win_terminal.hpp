@@ -34,10 +34,14 @@ public:
 
 private:
 #ifdef _WIN32
-    HANDLE hOut_;
-    HANDLE hIn_;
+    HANDLE hOut_{INVALID_HANDLE_VALUE};
+    HANDLE hIn_{INVALID_HANDLE_VALUE};
     DWORD original_out_mode_{0};
     DWORD original_in_mode_{0};
+    UINT original_cp_{0};
+    bool is_raw_mode_{false};
+    bool is_mouse_enabled_{false};
+    bool is_alt_screen_{false};
 #endif
 };
 

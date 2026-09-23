@@ -22,6 +22,7 @@ public:
     auto set_string(int col, int row, std::string_view text, const Style& style) -> void;
     auto fill(const ui::Rect& area, const Cell& cell) -> void;
     auto clear() -> void;
+    auto invalidate_front() -> void;
 
     // Access (from front buffer or back buffer? Usually from back buffer)
     auto at(int col, int row) const -> const Cell&;

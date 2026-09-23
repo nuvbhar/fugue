@@ -17,7 +17,11 @@ int main() {
         return 1;
     }
 
-    term.enable_raw_mode();
+    if (!term.enable_raw_mode().has_value()) {
+        std::cerr << "Failed to enable raw mode\n";
+        return 1;
+    }
+
     term.enter_alt_screen();
     term.enable_mouse();
 
@@ -62,11 +66,6 @@ int main() {
         renderer.flush(buffer);
         std::this_thread::sleep_for(16ms);
     }
-
-    term.disable_mouse();
-    term.leave_alt_screen();
-    term.disable_raw_mode();
-    term.shutdown();
 
     return 0;
 }

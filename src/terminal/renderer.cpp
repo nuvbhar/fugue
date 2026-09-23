@@ -33,21 +33,24 @@ auto Renderer::flush(ScreenBuffer& buffer) -> void {
                 last_style_ = cell.style;
             }
 
+            char32_t cp = cell.codepoint;
+            if (cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF)) cp = 0xFFFD;
+
             // Convert char32_t to UTF-8
-            if (cell.codepoint <= 0x7F) {
-                frame += static_cast<char>(cell.codepoint);
-            } else if (cell.codepoint <= 0x7FF) {
-                frame += static_cast<char>(0xC0 | ((cell.codepoint >> 6) & 0x1F));
-                frame += static_cast<char>(0x80 | (cell.codepoint & 0x3F));
-            } else if (cell.codepoint <= 0xFFFF) {
-                frame += static_cast<char>(0xE0 | ((cell.codepoint >> 12) & 0x0F));
-                frame += static_cast<char>(0x80 | ((cell.codepoint >> 6) & 0x3F));
-                frame += static_cast<char>(0x80 | (cell.codepoint & 0x3F));
-            } else if (cell.codepoint <= 0x10FFFF) {
-                frame += static_cast<char>(0xF0 | ((cell.codepoint >> 18) & 0x07));
-                frame += static_cast<char>(0x80 | ((cell.codepoint >> 12) & 0x3F));
-                frame += static_cast<char>(0x80 | ((cell.codepoint >> 6) & 0x3F));
-                frame += static_cast<char>(0x80 | (cell.codepoint & 0x3F));
+            if (cp <= 0x7F) {
+                frame += static_cast<char>(cp);
+            } else if (cp <= 0x7FF) {
+                frame += static_cast<char>(0xC0 | ((cp >> 6) & 0x1F));
+                frame += static_cast<char>(0x80 | (cp & 0x3F));
+            } else if (cp <= 0xFFFF) {
+                frame += static_cast<char>(0xE0 | ((cp >> 12) & 0x0F));
+                frame += static_cast<char>(0x80 | ((cp >> 6) & 0x3F));
+                frame += static_cast<char>(0x80 | (cp & 0x3F));
+            } else if (cp <= 0x10FFFF) {
+                frame += static_cast<char>(0xF0 | ((cp >> 18) & 0x07));
+                frame += static_cast<char>(0x80 | ((cp >> 12) & 0x3F));
+                frame += static_cast<char>(0x80 | ((cp >> 6) & 0x3F));
+                frame += static_cast<char>(0x80 | (cp & 0x3F));
             }
 
             cursor_col_ += cell.width;
@@ -68,14 +71,10 @@ auto Renderer::force_redraw(ScreenBuffer& buffer) -> void {
     last_style_ = Style{};
     cursor_col_ = -1;
     cursor_row_ = -1;
-    terminal_.write(escape::clear_screen());
+    terminal_.write(escape::reset_style() + escape::clear_screen());
     
-    // Invalidate front buffer to force redraw of everything
-    auto front = buffer.front(); // It's a span, can't directly mutate, let's create a new buffer or clear the internal front?
-    // wait, we can't mutate the span. 
-    // We can clear the front buffer by hacking or providing a clear_front method.
-    // For now, we will just call swap and clear? No, we shouldn't modify back buffer.
-    // Let's assume we don't need this yet.
+    buffer.invalidate_front();
+    flush(buffer);
 }
 
 } // namespace fugue::terminal

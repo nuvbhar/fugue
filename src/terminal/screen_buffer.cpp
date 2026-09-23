@@ -1,4 +1,5 @@
 #include "terminal/screen_buffer.hpp"
+#include <algorithm>
 
 namespace fugue::terminal {
 
@@ -61,6 +62,10 @@ auto ScreenBuffer::fill(const ui::Rect& area, const Cell& cell) -> void {
 
 auto ScreenBuffer::clear() -> void {
     std::fill(back_buffer_.begin(), back_buffer_.end(), Cell{});
+}
+
+auto ScreenBuffer::invalidate_front() -> void {
+    std::fill(front_buffer_.begin(), front_buffer_.end(), Cell{U'\0', Style{}, 0});
 }
 
 auto ScreenBuffer::at(int col, int row) const -> const Cell& {
