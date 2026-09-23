@@ -23,10 +23,11 @@ auto List::render(terminal::ScreenBuffer& buffer, const Rect& area) -> void {
         if (item_idx >= items_.size()) break;
 
         const auto& style = (item_idx == selected_) ? selected_style_ : normal_style_;
-        buffer.set_string(area.x, area.y + i, items_[item_idx], style);
-        
+        const auto& text = items_[item_idx];
+        int len = std::min(area.width, static_cast<int>(text.size()));
+        buffer.set_string(area.x, area.y + i, std::string_view(text).substr(0, len), style);
+
         // padding to fill width
-        int len = static_cast<int>(items_[item_idx].size());
         for (int c = area.x + len; c < area.x + area.width; ++c) {
             buffer.set_cell(c, area.y + i, terminal::Cell{U' ', style, 1});
         }

@@ -1,4 +1,5 @@
 #include "ui/components/text_box.hpp"
+#include <algorithm>
 
 namespace fugue::ui {
 
@@ -9,7 +10,9 @@ auto TextBox::update(const core::EventBus& /*bus*/) -> void {
 }
 
 auto TextBox::render(terminal::ScreenBuffer& buffer, const Rect& area) -> void {
-    buffer.set_string(area.x, area.y, text_, style_);
+    if (area.width <= 0 || area.height <= 0) return;
+    auto len = std::min<size_t>(text_.size(), static_cast<size_t>(area.width));
+    buffer.set_string(area.x, area.y, std::string_view(text_).substr(0, len), style_);
 }
 
 auto TextBox::handle_input(const terminal::InputEvent& /*event*/) -> bool {

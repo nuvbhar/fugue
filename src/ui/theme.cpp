@@ -1,15 +1,17 @@
 #include "ui/theme.hpp"
+#include <charconv>
 
 namespace fugue::ui {
 
 static auto parse_color(const std::string& hex) -> terminal::Color {
-    if (hex.length() == 7 && hex[0] == '#') {
-        int r = std::stoi(hex.substr(1, 2), nullptr, 16);
-        int g = std::stoi(hex.substr(3, 2), nullptr, 16);
-        int b = std::stoi(hex.substr(5, 2), nullptr, 16);
-        return terminal::Color::rgb(static_cast<uint8_t>(r), static_cast<uint8_t>(g), static_cast<uint8_t>(b));
+    if (hex.length() != 7 || hex[0] != '#') return terminal::Color::default_color();
+    uint8_t c[3]{};
+    for (int i = 0; i < 3; ++i) {
+        const char* first = hex.data() + 1 + i * 2;
+        auto [ptr, ec] = std::from_chars(first, first + 2, c[i], 16);
+        if (ec != std::errc{} || ptr != first + 2) return terminal::Color::default_color();
     }
-    return terminal::Color::default_color();
+    return terminal::Color::rgb(c[0], c[1], c[2]);
 }
 
 auto load_theme(const nlohmann::json& config) -> Theme {
