@@ -20,7 +20,7 @@ add_library(miniaudio INTERFACE)
 target_include_directories(miniaudio INTERFACE ${CMAKE_SOURCE_DIR}/third_party/miniaudio)
 
 # Core executable
-add_executable(fugue src/main.cpp)
+add_subdirectory(src)
 
 # CMake modules
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
