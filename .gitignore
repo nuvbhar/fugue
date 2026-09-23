@@ -1,0 +1,27 @@
+# ── Build artifacts ──
+build/
+out/
+
+# ── Dotfiles/dotdirs (all gitignored by default) ──
+.*
+
+# ── Exceptions: dotfiles that ARE tracked ──
+!.gitignore
+!.gitmodules
+!.github/
+!.coderabbit.yaml
+
+# ── Tests (local only, never pushed) ──
+tests/
+
+# ── IDE / Editor ──
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+*.user
+
+# ── OS junk ──
+Thumbs.db
+.DS_Store

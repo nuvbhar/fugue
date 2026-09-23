@@ -1,0 +1,5 @@
+# CodeRabbit Configuration
+language: "en-US"
+tone_instructions: "Be concise, objective, and focus on architectural and performance feedback. Ensure guidelines from .docs/AGENTS.md are followed."
+review:
+  auto_review: true
