@@ -10,11 +10,6 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# CMake modules
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
-include(CompilerWarnings)
-include(Platform)
-
 # Third-party submodules
 # json
 set(JSON_BuildTests OFF CACHE INTERNAL "")
@@ -27,8 +22,17 @@ target_include_directories(miniaudio INTERFACE ${CMAKE_SOURCE_DIR}/third_party/m
 # Core executable
 add_executable(fugue src/main.cpp)
 
+# CMake modules
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+include(CompilerWarnings)
+include(Platform)
+
 # Apply warnings and platform defines
 set_project_warnings(fugue)
-# Platform defines are handled inside Platform.cmake
+setup_platform(fugue)
 
 target_link_libraries(fugue PRIVATE nlohmann_json::nlohmann_json miniaudio)
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/CMakeLists.txt")
+    add_subdirectory(tests)
+endif()
