@@ -18,18 +18,41 @@ auto List::render(terminal::ScreenBuffer& buffer, const Rect& area) -> void {
         scroll_offset_ = selected_ - area.height + 1;
     }
 
+    bool needs_scrollbar = items_.size() > static_cast<size_t>(area.height);
+    int content_width = needs_scrollbar ? area.width - 1 : area.width;
+
     for (int i = 0; i < area.height; ++i) {
         size_t item_idx = scroll_offset_ + i;
-        if (item_idx >= items_.size()) break;
+        if (item_idx >= items_.size()) {
+            // clear remaining lines
+            for (int c = area.x; c < area.x + content_width; ++c) {
+                buffer.set_cell(c, area.y + i, terminal::Cell{U' ', normal_style_, 1});
+            }
+            continue;
+        }
 
         const auto& style = (item_idx == selected_) ? selected_style_ : normal_style_;
         const auto& text = items_[item_idx];
-        int len = std::min(area.width, static_cast<int>(text.size()));
+        int len = std::min(content_width, static_cast<int>(text.size()));
         buffer.set_string(area.x, area.y + i, std::string_view(text).substr(0, len), style);
 
         // padding to fill width
-        for (int c = area.x + len; c < area.x + area.width; ++c) {
+        for (int c = area.x + len; c < area.x + content_width; ++c) {
             buffer.set_cell(c, area.y + i, terminal::Cell{U' ', style, 1});
+        }
+    }
+
+    if (needs_scrollbar) {
+        int thumb_size = std::max(1, static_cast<int>((area.height * area.height) / items_.size()));
+        int track_size = area.height;
+        int max_scroll = static_cast<int>(items_.size()) - area.height;
+        int max_thumb_pos = track_size - thumb_size;
+        int thumb_pos = (max_scroll > 0) ? static_cast<int>((scroll_offset_ * max_thumb_pos) / max_scroll) : 0;
+
+        int sb_x = area.x + area.width - 1;
+        for (int i = 0; i < area.height; ++i) {
+            char32_t c = (i >= thumb_pos && i < thumb_pos + thumb_size) ? 0x2588 /* Full block */ : 0x2502 /* Vertical line */;
+            buffer.set_cell(sb_x, area.y + i, terminal::Cell{c, normal_style_, 1});
         }
     }
 }

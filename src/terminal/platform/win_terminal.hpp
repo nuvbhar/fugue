@@ -31,6 +31,9 @@ public:
     
     auto enter_alt_screen() -> void override;
     auto leave_alt_screen() -> void override;
+    
+    auto hide_cursor() -> void override;
+    auto show_cursor() -> void override;
 
 private:
 #ifdef _WIN32

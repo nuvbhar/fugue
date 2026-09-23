@@ -33,7 +33,7 @@ auto default_theme() -> Theme {
     Theme theme;
     theme.palette["primary"] = terminal::Color::rgb(0, 255, 0);
     theme.palette["secondary"] = terminal::Color::rgb(100, 100, 100);
-    theme.palette["background"] = terminal::Color::rgb(0, 0, 0);
+    theme.palette["background"] = terminal::Color::default_color();
     theme.palette["text"] = terminal::Color::rgb(255, 255, 255);
 
     theme.text_styles["title"] = terminal::Style{theme.palette["primary"], theme.palette["background"], true, false, false, false};

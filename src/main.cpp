@@ -33,6 +33,7 @@ int main() {
 
     term.enter_alt_screen();
     term.enable_mouse();
+    term.hide_cursor();
 
     auto size = term.size();
     ScreenBuffer buffer(size.cols, size.rows);
@@ -45,7 +46,11 @@ int main() {
     auto title_border = std::make_unique<Border>("title", BorderType::Rounded, theme.border_style, std::move(title_text));
 
     auto list_comp = std::make_unique<List>("track_list", theme.text_styles["status"], theme.text_styles["artist"]);
-    list_comp->set_items({"Track 1: Introduction", "Track 2: The Journey", "Track 3: Climax", "Track 4: Resolution"});
+    std::vector<std::string> tracks;
+    for (int i = 1; i <= 50; ++i) {
+        tracks.push_back(std::format("Track {}: Sample Track Name", i));
+    }
+    list_comp->set_items(tracks);
     auto main_border = std::make_unique<Border>("main_panel", BorderType::Single, theme.border_style, std::move(list_comp));
 
     std::map<std::string, IComponent*> components;

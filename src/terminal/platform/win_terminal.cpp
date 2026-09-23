@@ -31,6 +31,7 @@ auto WinTerminal::init() -> std::expected<void, std::string> {
 }
 
 auto WinTerminal::shutdown() -> void {
+    show_cursor();
     if (is_mouse_enabled_) disable_mouse();
     if (is_alt_screen_) leave_alt_screen();
     if (is_raw_mode_) disable_raw_mode();
@@ -171,6 +172,14 @@ auto WinTerminal::leave_alt_screen() -> void {
     if (!is_alt_screen_) return;
     write(escape::leave_alt_screen());
     is_alt_screen_ = false;
+}
+
+auto WinTerminal::hide_cursor() -> void {
+    write(escape::hide_cursor());
+}
+
+auto WinTerminal::show_cursor() -> void {
+    write(escape::show_cursor());
 }
 
 } // namespace fugue::terminal::platform

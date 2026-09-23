@@ -36,6 +36,9 @@ public:
     
     virtual auto enter_alt_screen() -> void = 0;
     virtual auto leave_alt_screen() -> void = 0;
+
+    virtual auto hide_cursor() -> void = 0;
+    virtual auto show_cursor() -> void = 0;
 };
 
 } // namespace fugue::terminal
