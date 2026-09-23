@@ -25,3 +25,5 @@ tests/
 # ── OS junk ──
 Thumbs.db
 .DS_Store
+
+third_party/ffmpeg/

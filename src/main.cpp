@@ -15,11 +15,38 @@
 #include "ui/components/border.hpp"
 #include "ui/components/list.hpp"
 
+#include "audio/miniaudio_engine.hpp"
+#include "audio/ffmpeg_decoder.hpp"
+#include "audio/playback_controller.hpp"
+
 using namespace std::chrono_literals;
 using namespace fugue::terminal;
 using namespace fugue::ui;
+using namespace fugue::audio;
 
-int main() {
+int main(int argc, char* argv[]) {
+    if (argc >= 3 && std::string(argv[1]) == "play") {
+        std::filesystem::path path = argv[2];
+        auto engine = std::make_unique<MiniaudioEngine>();
+        auto decoder = std::make_unique<FFmpegDecoder>();
+        PlaybackController controller(std::move(engine), std::move(decoder));
+        
+        auto result = controller.play(path);
+        if (!result) {
+            std::cerr << "Failed to play: " << result.error() << "\n";
+            return 1;
+        }
+        
+        if (auto track = controller.current_track()) {
+            std::cout << "Playing: " << track->title << " by " << track->artist << "\n";
+            std::cout << "Duration: " << track->duration_secs << "s\n";
+        }
+
+        std::cout << "Press Enter to stop playback...\n";
+        std::cin.get();
+        controller.stop();
+        return 0;
+    }
     fugue::terminal::platform::WinTerminal term;
     if (!term.init().has_value()) {
         std::cerr << "Failed to init terminal\n";

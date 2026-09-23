@@ -31,7 +31,9 @@ include(Platform)
 set_project_warnings(fugue)
 setup_platform(fugue)
 
-target_link_libraries(fugue PRIVATE nlohmann_json::nlohmann_json miniaudio)
+find_package(FFmpeg REQUIRED COMPONENTS avformat avcodec avutil swresample)
+
+target_link_libraries(fugue PRIVATE nlohmann_json::nlohmann_json miniaudio FFmpeg::avformat FFmpeg::avcodec FFmpeg::avutil FFmpeg::swresample)
 
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/CMakeLists.txt")
     add_subdirectory(tests)

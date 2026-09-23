@@ -25,6 +25,9 @@ add_executable(fugue
     ui/components/text_box.cpp
     ui/components/border.cpp
     ui/components/list.cpp
+    audio/miniaudio_engine.cpp
+    audio/ffmpeg_decoder.cpp
+    audio/playback_controller.cpp
     ${PLATFORM_SOURCES}
 )
 
