@@ -31,10 +31,10 @@ auto load_theme(const nlohmann::json& config) -> Theme {
 
 auto default_theme() -> Theme {
     Theme theme;
-    theme.palette["primary"] = terminal::Color::rgb(0, 255, 0);
+    theme.palette["primary"] = terminal::Color::rgb(153, 168, 158);   // Soft pastel grayish-green
     theme.palette["secondary"] = terminal::Color::rgb(100, 100, 100);
     theme.palette["background"] = terminal::Color::default_color();
-    theme.palette["text"] = terminal::Color::rgb(255, 255, 255);
+    theme.palette["text"] = terminal::Color::rgb(215, 215, 215);      // Soft off-white
 
     theme.text_styles["title"] = terminal::Style{theme.palette["primary"], theme.palette["background"], true, false, false, false};
     theme.text_styles["artist"] = terminal::Style{theme.palette["secondary"], theme.palette["background"], false, true, false, false};
