@@ -1,5 +1,6 @@
 #include "ui/theme.hpp"
 #include <charconv>
+#include <nlohmann/json.hpp>
 
 namespace fugue::ui {
 
