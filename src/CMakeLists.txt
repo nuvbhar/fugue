@@ -33,4 +33,14 @@ add_executable(fugue
 
 target_include_directories(fugue PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
+if (WIN32)
+    # Professional post-build step to copy only the required FFmpeg DLLs to the executable directory
+    add_custom_command(TARGET fugue POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        $<TARGET_RUNTIME_DLLS:fugue>
+        $<TARGET_FILE_DIR:fugue>
+        COMMAND_EXPAND_LISTS
+    )
+endif()
+
 
