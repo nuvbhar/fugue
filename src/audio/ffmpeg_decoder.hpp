@@ -12,7 +12,7 @@ namespace fugue::audio {
 
 class FFmpegDecoder : public IDecoder {
 public:
-    FFmpegDecoder() = default;
+    FFmpegDecoder();
     ~FFmpegDecoder() override;
 
     auto open(const std::filesystem::path& path) -> std::expected<TrackInfo, std::string> override;
@@ -37,6 +37,7 @@ private:
 
     uint32_t target_sample_rate_{48000};
     uint8_t target_channels_{2};
+    bool eof_reached_{false};
 };
 
 } // namespace fugue::audio

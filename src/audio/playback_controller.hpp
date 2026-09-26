@@ -55,6 +55,9 @@ private:
     // Seek request
     std::atomic<bool> seek_requested_{false};
     std::atomic<float> seek_target_{0.0f};
+    std::atomic<bool> end_of_file_{false};
+    std::atomic<uint32_t> flush_generation_{0};
+    std::atomic<uint32_t> audio_flush_generation_{0};
 };
 
 } // namespace fugue::audio

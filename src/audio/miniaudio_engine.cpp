@@ -23,6 +23,7 @@ auto MiniaudioEngine::init(uint32_t sample_rate, uint8_t channels, RenderCallbac
         return std::unexpected("Failed to initialize miniaudio device");
     }
 
+    ma_device_set_master_volume(&device_, volume_);
     initialized_ = true;
     return {};
 }

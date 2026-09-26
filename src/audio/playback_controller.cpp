@@ -17,7 +17,10 @@ PlaybackController::PlaybackController(std::unique_ptr<IAudioEngine> engine, std
 
 PlaybackController::~PlaybackController() {
     stop();
-    thread_running_ = false;
+    {
+        std::lock_guard<std::mutex> lock(decode_mutex_);
+        thread_running_ = false;
+    }
     decode_cv_.notify_one();
     if (decode_thread_.joinable()) {
         decode_thread_.join();
@@ -27,13 +30,21 @@ PlaybackController::~PlaybackController() {
 auto PlaybackController::play(const std::filesystem::path& path) -> std::expected<void, std::string> {
     stop();
 
-    auto track_info = decoder_->open(path);
+    std::expected<TrackInfo, std::string> track_info;
+    {
+        std::lock_guard<std::mutex> lock(decode_mutex_);
+        track_info = decoder_->open(path);
+    }
+    
     if (!track_info) {
         return std::unexpected(track_info.error());
     }
 
     current_track_ = *track_info;
     position_ = 0.0f;
+    end_of_file_ = false;
+    flush_generation_ = 0;
+    audio_flush_generation_ = 0;
     ring_buffer_.clear();
 
     auto init_result = engine_->init(current_track_->sample_rate, current_track_->channels, 
@@ -44,7 +55,11 @@ auto PlaybackController::play(const std::filesystem::path& path) -> std::expecte
     }
 
     state_ = State::Playing;
-    decode_cv_.notify_one();
+    
+    {
+        std::lock_guard<std::mutex> lock(decode_mutex_);
+        decode_cv_.notify_one();
+    }
 
     return engine_->start();
 }
@@ -58,6 +73,7 @@ auto PlaybackController::pause() -> void {
 auto PlaybackController::resume() -> void {
     if (state_ == State::Paused) {
         state_ = State::Playing;
+        std::lock_guard<std::mutex> lock(decode_mutex_);
         decode_cv_.notify_one();
     }
 }
@@ -66,15 +82,22 @@ auto PlaybackController::stop() -> void {
     state_ = State::Stopped;
     engine_->stop();
     engine_->shutdown();
-    decoder_->close();
+    {
+        std::lock_guard<std::mutex> lock(decode_mutex_);
+        decoder_->close();
+        seek_requested_ = false;
+    }
     current_track_.reset();
     position_ = 0.0f;
 }
 
 auto PlaybackController::seek(float position_secs) -> void {
     if (state_ != State::Stopped && current_track_) {
+        std::lock_guard<std::mutex> lock(decode_mutex_);
         seek_target_ = (std::clamp)(position_secs, 0.0f, current_track_->duration_secs);
         seek_requested_ = true;
+        end_of_file_ = false;
+        flush_generation_.fetch_add(1, std::memory_order_relaxed);
         decode_cv_.notify_one();
     }
 }
@@ -105,6 +128,11 @@ auto PlaybackController::audio_callback(std::span<float> buffer) -> void {
         return;
     }
 
+    if (audio_flush_generation_.load(std::memory_order_acquire) != flush_generation_.load(std::memory_order_relaxed)) {
+        ring_buffer_.clear();
+        audio_flush_generation_.store(flush_generation_.load(std::memory_order_relaxed), std::memory_order_release);
+    }
+
     size_t read = ring_buffer_.pop(buffer);
     if (read < buffer.size()) {
         std::fill(buffer.begin() + read, buffer.end(), 0.0f);
@@ -115,30 +143,36 @@ auto PlaybackController::audio_callback(std::span<float> buffer) -> void {
         position_ = position_ + secs_played;
     }
 
+    if (end_of_file_.load() && read == 0) {
+        state_ = State::Stopped;
+    }
+
     decode_cv_.notify_one(); // wake up decoder if it was waiting for space
 }
 
 auto PlaybackController::decoder_thread_loop() -> void {
     std::vector<float> decode_buf(DECODE_CHUNK_SIZE);
 
-    while (thread_running_) {
+    while (true) {
         std::unique_lock<std::mutex> lock(decode_mutex_);
         decode_cv_.wait(lock, [this]() {
             return !thread_running_ || 
                    seek_requested_ || 
-                   (state_ == State::Playing && ring_buffer_.available_write() >= DECODE_CHUNK_SIZE);
+                   (state_ == State::Playing && !end_of_file_ && ring_buffer_.available_write() >= DECODE_CHUNK_SIZE);
         });
 
         if (!thread_running_) break;
 
         if (seek_requested_) {
-            decoder_->seek(seek_target_);
-            ring_buffer_.clear();
-            position_ = seek_target_.load();
+            auto res = decoder_->seek(seek_target_);
+            if (res) {
+                position_ = seek_target_.load();
+            }
             seek_requested_ = false;
+            continue; // Re-evaluate wait conditions
         }
 
-        if (state_ == State::Playing) {
+        if (state_ == State::Playing && !end_of_file_) {
             size_t available_write = ring_buffer_.available_write();
             if (available_write > 0) {
                 size_t to_decode = (std::min)(available_write, decode_buf.size());
@@ -151,8 +185,7 @@ auto PlaybackController::decoder_thread_loop() -> void {
                 }
                 
                 if (result.end_of_file && result.frames_decoded == 0) {
-                    // end of file reached, but let audio engine play out the ring buffer
-                    std::this_thread::sleep_for(100ms);
+                    end_of_file_ = true;
                 }
             }
         }

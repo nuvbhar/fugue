@@ -4,6 +4,10 @@
 
 namespace fugue::audio {
 
+FFmpegDecoder::FFmpegDecoder() {
+    av_log_set_level(AV_LOG_ERROR);
+}
+
 FFmpegDecoder::~FFmpegDecoder() {
     close();
 }
@@ -83,42 +87,65 @@ auto FFmpegDecoder::open(const std::filesystem::path& path) -> std::expected<Tra
         info.title = path.filename().string();
     }
 
+    eof_reached_ = false;
     return info;
 }
 
 auto FFmpegDecoder::read_and_decode_frame() -> bool {
-    while (av_read_frame(format_ctx_, packet_) >= 0) {
-        if (packet_->stream_index == audio_stream_idx_) {
-            int ret = avcodec_send_packet(codec_ctx_, packet_);
-            if (ret < 0) {
-                av_packet_unref(packet_);
-                return false;
+    while (true) {
+        int ret = avcodec_receive_frame(codec_ctx_, frame_);
+        if (ret >= 0) {
+            int out_samples = swr_get_out_samples(swr_ctx_, frame_->nb_samples);
+            size_t out_size = out_samples * target_channels_;
+            
+            if (resample_buf_.size() < resample_buf_tail_ + out_size) {
+                resample_buf_.resize(resample_buf_tail_ + out_size * 2);
             }
 
-            ret = avcodec_receive_frame(codec_ctx_, frame_);
-            if (ret >= 0) {
-                int out_samples = swr_get_out_samples(swr_ctx_, frame_->nb_samples);
+            uint8_t* out_data = reinterpret_cast<uint8_t*>(resample_buf_.data() + resample_buf_tail_);
+            int converted_samples = swr_convert(swr_ctx_, &out_data, out_samples, 
+                                                const_cast<const uint8_t**>(frame_->data), frame_->nb_samples);
+                                                
+            if (converted_samples > 0) {
+                resample_buf_tail_ += converted_samples * target_channels_;
+            }
+            av_frame_unref(frame_);
+            return true;
+        } else if (ret == AVERROR_EOF) {
+            // Drain swresample
+            int out_samples = swr_get_out_samples(swr_ctx_, 0);
+            if (out_samples > 0) {
                 size_t out_size = out_samples * target_channels_;
-                
                 if (resample_buf_.size() < resample_buf_tail_ + out_size) {
                     resample_buf_.resize(resample_buf_tail_ + out_size * 2);
                 }
-
                 uint8_t* out_data = reinterpret_cast<uint8_t*>(resample_buf_.data() + resample_buf_tail_);
-                int converted_samples = swr_convert(swr_ctx_, &out_data, out_samples, 
-                                                    const_cast<const uint8_t**>(frame_->data), frame_->nb_samples);
-                                                    
+                int converted_samples = swr_convert(swr_ctx_, &out_data, out_samples, nullptr, 0);
                 if (converted_samples > 0) {
                     resample_buf_tail_ += converted_samples * target_channels_;
+                    return true;
                 }
-                
-                av_packet_unref(packet_);
-                return true;
             }
+            return false;
+        } else if (ret != AVERROR(EAGAIN)) {
+            // Error, continue
         }
-        av_packet_unref(packet_);
+
+        if (eof_reached_) {
+            return false;
+        }
+
+        ret = av_read_frame(format_ctx_, packet_);
+        if (ret < 0) {
+            eof_reached_ = true;
+            avcodec_send_packet(codec_ctx_, nullptr); // flush codec
+        } else {
+            if (packet_->stream_index == audio_stream_idx_) {
+                avcodec_send_packet(codec_ctx_, packet_);
+            }
+            av_packet_unref(packet_);
+        }
     }
-    return false;
 }
 
 auto FFmpegDecoder::decode(std::span<float> output_buffer) -> DecoderResult {
@@ -162,6 +189,7 @@ auto FFmpegDecoder::seek(float position_secs) -> std::expected<void, std::string
     avcodec_flush_buffers(codec_ctx_);
     resample_buf_head_ = 0;
     resample_buf_tail_ = 0;
+    eof_reached_ = false;
     
     return {};
 }
@@ -186,6 +214,7 @@ auto FFmpegDecoder::close() -> void {
     audio_stream_idx_ = -1;
     resample_buf_head_ = 0;
     resample_buf_tail_ = 0;
+    eof_reached_ = false;
 }
 
 } // namespace fugue::audio
