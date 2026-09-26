@@ -10,6 +10,13 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Enable LTO (Interprocedural Optimization) for size reduction
+include(CheckIPOSupported)
+check_ipo_supported(RESULT ipo_supported)
+if(ipo_supported)
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+endif()
+
 # Third-party submodules
 # json
 set(JSON_BuildTests OFF CACHE INTERNAL "")
